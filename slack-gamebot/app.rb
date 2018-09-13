@@ -1,105 +1,95 @@
 module SlackGamebot
   class App < SlackRubyBotServer::App
-    def prepare!
-      super
-      migrate_from_single_team!
-      mark_teams_as_active!
-      ensure_a_team_captain!
-      migrate_from_single_game!
-      ensure_a_team_game!
-      deactivate_dead_teams!
-      purge_inactive_teams!
-      nudge_sleeping_teams!
-      set_team_gifs_default!
-      set_team_aliases!
-      set_team_api_default!
+    include Celluloid
+
+    DEAD_MESSAGE = <<-EOS.freeze
+This leaderboard has been dead for over a month, deactivating.
+Re-install the bot at https://www.playplay.io. Your data will be purged in 2 weeks.
+EOS
+
+    def after_start!
+      once_and_every 60 * 60 * 24 do
+        check_trials!
+        deactivate_dead_teams!
+        inform_dead_teams!
+        check_subscribed_teams!
+        check_active_subscriptions_without_teams!
+      end
     end
 
     private
 
-    def migrate_from_single_team!
-      return unless ENV.key?('SLACK_API_TOKEN')
-      logger.info 'Migrating from env SLACK_API_TOKEN ...'
-      team = Team.find_or_create_from_env!
-      logger.info "Automatically migrated team: #{team}."
-      User.where(team: nil).update_all(team_id: team.id)
-      Challenge.where(team: nil).update_all(team_id: team.id)
-      Season.where(team: nil).update_all(team_id: team.id)
-      Match.where(team: nil).update_all(team_id: team.id)
-      logger.warn "You should unset ENV['SLACK_API_TOKEN'] and ENV['GAMEBOT_SECRET']."
-    end
-
-    def migrate_from_single_game!
-      return unless ENV.key?('SLACK_CLIENT_ID') && ENV.key?('SLACK_CLIENT_SECRET')
-      logger.info 'Migrating from env SLACK_CLIENT_ID and SLACK_CLIENT_SECRET ...'
-      game = Game.find_or_create_from_env!
-      logger.info "Automatically migrated game: #{game}."
-      Team.where(game: nil).update_all(game_id: game.id)
-      logger.warn "You should unset ENV['SLACK_CLIENT_ID'], ENV['SLACK_CLIENT_SECRET'] and ENV['SLACK_RUBY_BOT_ALIASES']."
-    end
-
-    def mark_teams_as_active!
-      Team.where(active: nil).update_all(active: true)
-    end
-
-    def ensure_a_team_captain!
-      Team.each do |team|
-        next if team.captains.count > 0
-        team.unset :secret
-        user = team.users.asc(:_id).first
-        next unless user
-        user.promote!
-        logger.info "#{team}: promoted #{user} to captain."
+    def once_and_every(tt)
+      yield
+      every tt do
+        yield
       end
     end
 
-    def ensure_a_team_game!
-      game = Game.first || Game.create!(name: 'default')
-      Team.where(game: nil).update_all(game_id: game.id)
+    def inform_dead_teams!
+      Team.where(active: false).each do |team|
+        next if team.dead_at
+        begin
+          team.dead! DEAD_MESSAGE, 'dead'
+        rescue StandardError => e
+          logger.warn "Error informing dead team #{team}, #{e.message}."
+        end
+      end
     end
 
     def deactivate_dead_teams!
       Team.active.each do |team|
+        next if team.subscribed?
         next unless team.dead?
         begin
           team.deactivate!
-          team.inform! 'This leaderboard has been dead for over a month, deactivating. Your data will be purged in 2 weeks.', 'dead'
         rescue StandardError => e
-          logger.warn "Error informing team #{team}, #{e.message}."
+          logger.warn "Error deactivating team #{team}, #{e.message}."
         end
       end
     end
 
-    def purge_inactive_teams!
-      Team.purge!
-    end
-
-    def nudge_sleeping_teams!
-      Team.active.each do |team|
-        next unless team.nudge?
+    def check_trials!
+      Team.active.where(subscribed: false).each do |team|
         begin
-          team.nudge!
+          logger.info "Team #{team} has #{team.remaining_trial_days} trial days left."
+          next unless team.remaining_trial_days > 0 && team.remaining_trial_days <= 3
+          team.inform_trial!
         rescue StandardError => e
-          logger.warn "Error nudging team #{team}, #{e.message}."
+          logger.warn "Error checking team #{team} trial, #{e.message}."
         end
       end
     end
 
-    # default team GIFs to true
-    def set_team_gifs_default!
-      Team.where(gifs: nil).update_all(gifs: true)
-    end
-
-    # game aliases get copied onto teams upon creation and can be modified by team captains
-    def set_team_aliases!
-      Game.each do |game|
-        game.teams.where(aliases: nil).update_all(aliases: game.aliases)
+    def check_subscribed_teams!
+      Team.where(subscribed: true, :stripe_customer_id.ne => nil).each do |team|
+        begin
+          team.stripe_customer.subscriptions.each do |subscription|
+            subscription_name = "#{subscription.plan.name} (#{ActiveSupport::NumberHelper.number_to_currency(subscription.plan.amount.to_f / 100)})"
+            logger.info "Checking #{team} subscription to #{subscription_name}, #{subscription.status}."
+            case subscription.status
+            when 'past_due'
+              logger.warn "Subscription for #{team} is #{subscription.status}, notifying."
+              team.inform_admin! "Your subscription to #{subscription_name} is past due. #{team.update_cc_text}"
+            when 'canceled', 'unpaid'
+              logger.warn "Subscription for #{team} is #{subscription.status}, downgrading."
+              team.inform_admin! "Your subscription to #{subscription.plan.name} (#{ActiveSupport::NumberHelper.number_to_currency(subscription.plan.amount.to_f / 100)}) was canceled and your team has been downgraded. Thank you for being a customer!"
+              team.update_attributes!(subscribed: false)
+            end
+          end
+        rescue StandardError => e
+          logger.warn "Error checking team #{team} subscription, #{e.message}."
+        end
       end
     end
 
-    # default team API to false
-    def set_team_api_default!
-      Team.where(api: nil).update_all(api: false)
+    def check_active_subscriptions_without_teams!
+      Stripe::Subscription.all(plan: 'slack-playplay-yearly').each do |subscription|
+        next if subscription.cancel_at_period_end
+        next if Team.where(stripe_customer_id: subscription.customer).exists?
+        customer = Stripe::Customer.retrieve(subscription.customer)
+        logger.warn "Customer #{customer.email}, team #{customer.metadata['name']} is #{subscription.status}, but customer no longer exists."
+      end
     end
   end
 end

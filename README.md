@@ -18,7 +18,7 @@ A generic game bot for slack. Works for ping-pong (2, 4 or more players), chess,
 Create a new Bot Integration under [services/new/bot](http://slack.com/services/new/bot). Note the API token.
 You will be able to invoke gamebot by the name you give it in the UI above.
 
-Run `SLACK_API_TOKEN=<your API token> GAMEBOT_SECRET=secret foreman start`
+Run `SLACK_API_TOKEN=<your API token> foreman start`
 
 ## Production Deployment
 
@@ -44,6 +44,10 @@ Politely says 'hi' back.
 
 Get help.
 
+#### gamebot info
+
+Bot credits.
+
 #### gamebot sucks
 
 You can tell the bot that it sucks. But it will talk back.
@@ -52,7 +56,7 @@ You can tell the bot that it sucks. But it will talk back.
 
 #### gamebot register
 
-Registers a user.
+Re-registers a user. This is automatic, but a user can unregister and come back with this command.
 
 ![](screenshots/register.gif)
 
@@ -63,6 +67,9 @@ gamebot register
 
 Welcome back Victor Barna! I've updated your registration.
 ```
+
+You can also remove yourself from the leaderboard with `gamebot unregister me` and re-register youself again with `gamebot register`.
+The data is not removed, but the user will no longer appear in the leaderboards and cannot participate in challenges.
 
 #### gamebot challenge &lt;opponent&gt; ... [with &lt;teammate&gt; ...]
 
@@ -80,6 +87,16 @@ You can create group challenges, too. Both sides must have the same number of pl
 gamebot challenge @WangHoe @ZhangJike with @DengYaping
 
 Victor Barna and Deng Yaping challenged Wang Hoe and Zhang Jike to a match!
+```
+
+#### gamebot challenge?
+
+Show elo at stake for each opponent.
+
+```
+gamebot challenge? @WangHoe
+
+Victor Barna challenging Wang Hoe to a match is worth 48 and 24 elo.
 ```
 
 #### gamebot accept
@@ -132,7 +149,7 @@ You can record a loss without a challenge.
 
 ![](screenshots/lost_to.gif)
 
-You can also record scores and record lost matches with multiple players.
+You can also record scores and record lost matches without a challenge including with multiple players.
 
 ```
 gamebot lost to @WangHoe @ZhangJike with @DengYaping 5:21
@@ -153,6 +170,20 @@ gamebot draw 2:2
 
 Match has been recorded. Victor Barna tied with Zhang Jike with a score of 2:2.
 ```
+
+You can also record scores and ties without a challenge.
+
+```
+gamebot draw to @VictorBarna
+
+Match is a draw, waiting to hear from Victor Barna.
+
+gamebot draw 2:2
+
+Match is a draw! Wang Hoe tied with Victor Barna with the score of 2:2.
+```
+
+You can also record scores and have multiple players.
 
 #### gamebot resigned [to &lt;opponent&gt; [with &lt;teammate&gt;]]
 
@@ -194,6 +225,16 @@ gamebot cancel
 Victor Barna and Deng Yaping canceled a challenge against Wang Hoe and Zhang Jike.
 ```
 
+#### gamebot taunt &lt;opponent&gt; [&lt;opponent&gt; ...]
+
+Taunt other players.
+
+```
+gamebot taunt @WangHoe
+
+Victor Barna says Wang Hoe sucks at ping pong!
+```
+
 #### gamebot leaderboard [number|infinity]
 
 Get the leaderboard.
@@ -201,12 +242,12 @@ Get the leaderboard.
 ```
 gamebot leaderboard
 
-1. Victor Barna: 3 wins, 2 losses (elo: 148)
+1. Victor Barna: 3 wins, 2 losses (elo: 148, lws: 5)
 2. Deng Yaping: 1 win, 3 losses (elo: 24)
 3. Wang Hoe: 0 wins, 1 loss (elo: -12)
 ```
 
-The leaderboard contains 3 topmost players ranked by [Elo](http://en.wikipedia.org/wiki/Elo_rating_system), use _leaderboard 10_ or _leaderboard infinity_ to see 10 players or more, respectively.
+The leaderboard contains 3 topmost players ranked by [Elo](http://en.wikipedia.org/wiki/Elo_rating_system), use _leaderboard 10_ or _leaderboard infinity_ to see 10 players or more, respectively. It also shows the longest winning (lws) and losing (lls) streaks of at least 3.
 
 In case you want to see leaderboard in reverse order (which would be totally wrong but motivational for people at the bottom of leaderboard), specify a negative number or `-infinity`:
 
@@ -215,7 +256,7 @@ gamebot leaderboard -5
 
 1. Wang Hoe: 0 wins, 1 loss (elo: -12)
 2. Deng Yaping: 1 win, 3 losses (elo: 24)
-3. Victor Barna: 3 wins, 2 losses (elo: 148)
+3. Victor Barna: 3 wins, 2 losses (elo: 148, lws: 5)
 ```
 
 #### gamebot matches [number|infinity]
@@ -316,6 +357,44 @@ Current: Deng Yaping: 1 win, 0 losses (elo: 48), 1 game, 2 players
 2015-07-16: Wang Hoe: 28 wins, 19 losses (elo: 214), 206 games, 25 players
 ```
 
+#### gamebot unregister &lt;player&gt;
+
+Captains can remove users.
+
+```
+gamebot unregister @WangHoe
+
+I've removed @WangHoe from the leaderboard.
+```
+
+Users that have left a Slack team can be removed by omitting the `@`, eg. `gamebot unregister WangHoe`.
+
+#### gamebot set nickname [name]
+
+Sets a nickname for display purposes.
+
+```
+gamebot set nickname John Doe
+```
+
+Unset a nickname.
+
+```
+gamebot unset nickname
+```
+
+Captains can set nicknames of users by using a Slack mention.
+
+```
+gamebot set nickname @WangHoe John Doe
+```
+
+Captains can unset nicknames, too.
+
+```
+gamebot unset nickname @WangHoe
+```
+
 #### gamebot set gifs on|off
 
 Enable/disable GIFs for your team.
@@ -328,6 +407,20 @@ GIFs for team China are off.
 
 ![](screenshots/gifs.gif)
 
+Using `unset gifs` is equivalent to `set gifs off`.
+
+#### gamebot set elo [number]
+
+Set and resets the base elo for new seasons. Default is 0.
+
+```
+gamebot set elo 1000
+```
+
+```
+gamebot unset elo
+```
+
 #### gamebot set aliases &lt;alias|none&gt; ...
 
 Set additional aliases for the bot. For example you could upload a custom emoji for :pong: and set an alias for it.
@@ -338,9 +431,9 @@ gamebot set aliases pp :pong:
 Team China aliases are set to pp and :pong:.
 ```
 
-Remove all aliases with `set aliases none`.
-
 ![](screenshots/aliases.gif)
+
+Remove all aliases with `unset aliases`.
 
 #### gamebot set api on|off
 
@@ -351,6 +444,61 @@ gamebot set api on
 
 API for team China is on!
 http://www.playplay.io/api/teams/57224e65bc526eac95bfe316
+```
+
+```
+gamebot unset api
+
+API for team China is off.
+```
+
+#### gamebot set unbalanced on|off
+
+Allow unbalanced challenges with different number of opponents.
+
+```
+gamebot set unbalanced on
+
+Unbalanced challenges for team China are on!
+```
+
+#### gamebot subscription
+
+DM to show paid subscription information.
+
+```
+subscription
+
+Your trial subscription expires in 13 days. Subscribe your team for $29.99 a year at ... .
+```
+
+Captains are able to see credit card info.
+
+```
+subscription
+
+Customer since August 11, 2018.
+Subscribed to Slack PlayPlay (Yearly) ($29.99), will auto-renew on August 11, 2019.
+Invoice for $29.99 on August 11, 2018, paid.
+On file Visa card, user@example.com ending with 4242, expires 2/2022.
+Update your credit card info at ... .
+```
+
+#### gamebot unsubscribe [id]
+
+DM to cancel a paid subscription.
+
+```
+unsubscribe
+
+Subscribed to Slack PlayPlay (Yearly) ($29.99), will auto-renew on August 11, 2019.
+Send `unsubscribe sub_DOvlBd1lETNimB` to unsubscribe.
+```
+
+```
+unsubscribe sub_DOvlBd1lETNimB
+
+Successfully canceled Slack PlayPlay (Yearly) ($29.99).
 ```
 
 ## API

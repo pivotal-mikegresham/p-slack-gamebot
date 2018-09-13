@@ -1,5 +1,24 @@
-### Changelog
+### Change Log
 
+* [#169](https://github.com/dblock/slack-gamebot/issues/169): Added `draw to`, similar to `lost to` - [@dblock](https://github.com/dblock).
+* [#154](https://github.com/dblock/slack-gamebot/issues/154): Added `unsubscribe` to cancel a paid subscription - [@dblock](https://github.com/dblock).
+* [#168](https://github.com/dblock/slack-gamebot/issues/168): Added `challenge?` to display elo stake - [@dblock](https://github.com/dblock).
+* [#161](https://github.com/dblock/slack-gamebot/pull/161): Added `MONGODB_URI` env as production mongoid client uri - [@dsantosmerino](https://github.com/dsantosmerino).
+* [#153](https://github.com/dblock/slack-gamebot/pull/153): Added `taunt` that allows users to taunt other users - [@marin-hyatt](https://github.com/marin-hyatt).
+* [#155](https://github.com/dblock/slack-gamebot/issues/155): Fix: Players can no longer lose to themselves - [@kanno41](https://github.com/kanno41).
+* [#149](https://github.com/dblock/slack-gamebot/issues/149): Added `premium` info and a way to change team cc - [@dblock](https://github.com/dblock).
+* [#138](https://github.com/dblock/slack-gamebot/issues/138): Fix: reset season with matches lost and no challenges - [@dblock](https://github.com/dblock).
+* [#113](https://github.com/dblock/slack-gamebot/issues/113): Store elo history - [@dblock](https://github.com/dblock).
+* [#129](https://github.com/dblock/slack-gamebot/issues/129): Added longest winning and losing streaks in leaderboard - [@dblock](https://github.com/dblock).
+* [#124](https://github.com/dblock/slack-gamebot/issues/124): Allow unbalanced challenges via `set unbalanced on` - [@dblock](https://github.com/dblock).
+* [#130](https://github.com/dblock/slack-gamebot/issues/130): Added `unset` to unset settings - [@dblock](https://github.com/dblock).
+* [#123](https://github.com/dblock/slack-gamebot/issues/123): Captains can set other user's nicknames - [@dblock](https://github.com/dblock).
+* [#88](https://github.com/dblock/slack-gamebot/issues/88): Set `nickname` to obfuscate your username in leaderboard output - [@dblock](https://github.com/dblock).
+* [#86](https://github.com/dblock/slack-gamebot/issues/86): Added `unregister` to remove yourself or another player from the leaderboard - [@dblock](https://github.com/dblock).
+* [#119](https://github.com/dblock/slack-gamebot/issues/119): Fix: teams reporting matches with `lost to` incorrectly marked as dead - [@dblock](https://github.com/dblock).
+* [#114](https://github.com/dblock/slack-gamebot/issues/114): Set a team base elo rating with `set elo` for new seasons - [@dblock](https://github.com/dblock).
+* [#116](https://github.com/dblock/slack-gamebot/issues/116): Notify that a team has been upgraded in Slack - [@dblock](https://github.com/dblock).
+* [#117](https://github.com/dblock/slack-gamebot/issues/117): Send a welcome message when the bot joins a channel - [@dblock](https://github.com/dblock).
 * [#112](https://github.com/dblock/slack-gamebot/issues/112): Fix: matches recorded with `lost to` are not displayed in `matches` - [@dblock](https://github.com/dblock).
 * [#118](https://github.com/dblock/slack-gamebot/issues/118): Fix: aliases - [@dblock](https://github.com/dblock).
 * Features such as `seasons` and `set` now require a premium subscription - [@dblock](https://github.com/dblock).
