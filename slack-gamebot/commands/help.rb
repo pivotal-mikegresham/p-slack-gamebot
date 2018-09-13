@@ -25,7 +25,7 @@ draw: record a tie
 
 Stats
 -----
-leaderboard [number|infinity]: show the leaderboard, eg. leaderboard 10
+leaderboard: show the top 3 players. (leaderboard # has been disabled to prevent channel spam.)
 rank [<player> ...]: rank a player or a list of players
 matches [number|infinity]: show this season's matches
 season: show current season

@@ -1,0 +1,3 @@
+applications:
+- name: p-slack-gamebot
+  command: bundle exec unicorn -p $PORT

@@ -14,9 +14,9 @@ module SlackGamebot
           end
           case number.downcase
           when 'infinity'
-            max = nil
+            max = 3
           else
-            max = Integer(number)
+            max = 3
           end
         end
         ranked_players = client.owner.users.ranked
